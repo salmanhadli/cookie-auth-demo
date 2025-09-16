@@ -6,26 +6,45 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ allow React Native app to talk to this server
+// CORS: allow cookies
 app.use(
   cors({
-    origin: true,             // allow all origins for dev
-    credentials: true,        // allow cookies
+    origin: true,
+    credentials: true,
   })
 );
 
-// fake login endpoint
-app.post("/login", (req, res) => {
-  // in real apps: validate username/password
-  res.cookie("sessionid", "abc123", {
-    httpOnly: true,   // 🔒 JS cannot read
-    secure: true,     // 🔒 only over HTTPS
-    sameSite: "lax"
-  });
-  res.json({ message: "Logged in successfully ✅" });
+// Fake login page (simple HTML form)
+app.get("/login", (req, res) => {
+  res.send(`
+    <html>
+      <body>
+        <h2>Login Page</h2>
+        <form method="POST" action="/do-login">
+          <button type="submit">Login</button>
+        </form>
+      </body>
+    </html>
+  `);
 });
 
-// protected endpoint
+// POST login (sets cookie + redirects)
+app.post("/do-login", (req, res) => {
+  res.cookie("sessionid", "abc123", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+  });
+  // 🔥 Important: redirect to /auth/success so WebView detects login
+  res.redirect("/auth/success");
+});
+
+// Redirect target
+app.get("/auth/success", (req, res) => {
+  res.send("<h2>Login successful! You can now close this page.</h2>");
+});
+
+// Protected endpoint
 app.get("/protected", (req, res) => {
   const { sessionid } = req.cookies;
   if (sessionid === "abc123") {
@@ -35,7 +54,7 @@ app.get("/protected", (req, res) => {
   }
 });
 
-// health check
+// Health check
 app.get("/", (req, res) => res.send("Cookie Auth Demo API running 🍪"));
 
 const PORT = process.env.PORT || 3000;
