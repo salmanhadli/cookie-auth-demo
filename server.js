@@ -1,21 +1,28 @@
-const express = require("express");
-const cookieParser = require("cookie-parser");
-const cors = require("cors");
+const express = require('express')
+const cookieParser = require('cookie-parser')
+const cors = require('cors')
 
-const app = express();
-app.use(express.json());
-app.use(cookieParser());
+const app = express()
+app.use(express.json())
+app.use(cookieParser())
 
-// CORS: allow cookies
+const allowedOrigins = ['https://app.example.com']
+
 app.use(
   cors({
-    origin: true,
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        callback(new Error('Not allowed by CORS'))
+      }
+    },
     credentials: true,
   })
-);
+)
 
 // Fake login page (simple HTML form)
-app.get("/login", (req, res) => {
+app.get('/login', (req, res) => {
   res.send(`
     <html>
       <body>
@@ -25,37 +32,39 @@ app.get("/login", (req, res) => {
         </form>
       </body>
     </html>
-  `);
-});
+  `)
+})
 
 // POST login (sets cookie + redirects)
-app.post("/do-login", (req, res) => {
-  res.cookie("sessionid", "abc123", {
+app.post('/do-login', (req, res) => {
+  res.cookie('sessionid', 'abc123', {
     httpOnly: true,
     secure: true,
-    sameSite: "lax",
-  });
+    sameSite: 'lax',
+  })
   // 🔥 Important: redirect to /auth/success so WebView detects login
-  res.redirect("/auth/success");
-});
+  res.redirect('/auth/success')
+})
 
 // Redirect target
-app.get("/auth/success", (req, res) => {
-  res.send("<h2>Login successful! You can now close this page.</h2>");
-});
+app.get('/auth/success', (req, res) => {
+  res.send('<h2>Login successful! You can now close this page.</h2>')
+})
 
 // Protected endpoint
-app.get("/protected", (req, res) => {
-  const { sessionid } = req.cookies;
-  if (sessionid === "abc123") {
-    res.json({ data: "Super secret data 🚀" });
+app.get('/protected', (req, res) => {
+  const { sessionid } = req.cookies
+  if (sessionid === 'abc123') {
+    res.json({ data: 'Super secret data 🚀' })
   } else {
-    res.status(401).json({ error: "Unauthorized ❌" });
+    res.status(401).json({ error: 'Unauthorized ❌' })
   }
-});
+})
 
 // Health check
-app.get("/", (req, res) => res.send("Cookie Auth Demo API running 🍪"));
+app.get('/', (req, res) => res.send('Cookie Auth Demo API running 🍪'))
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () =>
+  console.log(`Server running on http://localhost:${PORT}`)
+)
